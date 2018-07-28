@@ -7,8 +7,9 @@ column_units = [cross(rows, c) for c in cols]
 square_units = [cross(rs, cs) for rs in ('ABC','DEF','GHI') for cs in ('123','456','789')]
 unitlist = row_units + column_units + square_units
 
-# TODO: Update the unit list to add the new diagonal units
-unitlist = unitlist
+# Done: Update the unit list to add the new diagonal units
+diag_units = [[rows[i] + cols[i] for i in range(len(rows))], [rows[i] + cols[-i - 1] for i in range(len(rows))]]
+unitlist = unitlist + diag_units
 
 
 # Must be called after all units (including diagonals) are added to the unitlist
@@ -53,8 +54,22 @@ def naked_twins(values):
     Pseudocode for this algorithm on github:
     https://github.com/udacity/artificial-intelligence/blob/master/Projects/1_Sudoku/pseudocode.md
     """
-    # TODO: Implement this function!
-    raise NotImplementedError
+    for unit in unitlist:
+        two_val_boxes = [b for b in unit if len(values[b]) == 2]
+        twin_pairs = [(two_val_boxes[i], two_val_boxes[j])
+                      for i in range(len(two_val_boxes))
+                      for j in range(i+1, len(two_val_boxes))
+                      if values[two_val_boxes[i]] == values[two_val_boxes[j]]]
+
+        for twin_pair in twin_pairs:
+            twin_val = values[twin_pair[0]]
+            if len(twin_val) < 2:
+                break
+            for box in unit:
+                if (box not in twin_pair):
+                    values[box] = values[box].replace( \
+                        twin_val[0], "").replace(twin_val[1], "")
+    return(values)
 
 
 def eliminate(values):
@@ -73,8 +88,13 @@ def eliminate(values):
     dict
         The values dictionary with the assigned values eliminated from peers
     """
-    # TODO: Copy your code from the classroom to complete this function
-    raise NotImplementedError
+    for curr_box in values.keys():
+        curr_val = values[curr_box]
+        if len(curr_val) == 1:
+            for peer in peers[curr_box]:
+                values[peer] = values[peer].replace(curr_val, '')
+    return(values)
+
 
 
 def only_choice(values):
@@ -97,8 +117,15 @@ def only_choice(values):
     -----
     You should be able to complete this function by copying your code from the classroom
     """
-    # TODO: Copy your code from the classroom to complete this function
-    raise NotImplementedError
+    for unit in unitlist:
+        unit_vals = [values[b] for b in unit]
+        all_vals = ''.join(unit_vals)
+        for i in '123456789':
+            if all_vals.count(i) == 1:
+                for u in unit:
+                    if i in values[u]:
+                        values[u] = i
+    return(values)
 
 
 def reduce_puzzle(values):
@@ -115,8 +142,27 @@ def reduce_puzzle(values):
         The values dictionary after continued application of the constraint strategies
         no longer produces any changes, or False if the puzzle is unsolvable 
     """
-    # TODO: Copy your code from the classroom and modify it to complete this function
-    raise NotImplementedError
+    stalled = False
+    while not stalled:
+        # Check how many boxes have a determined value
+        solved_values_before = len([box for box in values.keys() 
+                                    if len(values[box]) == 1])
+
+        eliminate(values)
+
+        only_choice(values)
+
+        naked_twins(values)
+
+        solved_values_after = len([box for box in values.keys() 
+                                   if len(values[box]) == 1])
+        # If no new values were added, stop the loop.
+        stalled = solved_values_before == solved_values_after
+        # Sanity check, return False if there is a box with zero 
+        # available values:
+        if len([box for box in values.keys() if len(values[box]) == 0]):
+            return False
+    return values
 
 
 def search(values):
@@ -138,8 +184,25 @@ def search(values):
     You should be able to complete this function by copying your code from the classroom
     and extending it to call the naked twins strategy.
     """
-    # TODO: Copy your code from the classroom to complete this function
-    raise NotImplementedError
+    reduce_puzzle(values)
+    # Choose one of the unfilled squares with the fewest possibilities
+    boxes_left = {b:len(values[b]) for b in values.keys() if len(values[b]) > 1}
+    b_keys = list(boxes_left.keys())
+    if len(b_keys) == 0:
+        return values
+    min_box = b_keys[0]
+    for b in b_keys:
+        if boxes_left[b] < boxes_left[min_box]:
+            min_box = b
+    # Now use recursion to solve each one of the resulting sudokus, and if one returns a value (not False), return that answer!
+    for val in values[min_box]:
+        val_search = values.copy()
+        val_search[min_box] = val
+        end_val = search(val_search)
+        solved_values = [box for box in end_val.keys() if len(end_val[box]) == 1]
+        if len(solved_values) == 81:
+            return end_val
+    return(values)
 
 
 def solve(grid):
