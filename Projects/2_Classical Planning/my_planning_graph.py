@@ -301,7 +301,7 @@ class PlanningGraph:
                 parent_literals.add_outbound_edges(action, action.preconditions)
                 action_layer.add_inbound_edges(action, action.preconditions)
 
-                # # add two-way edges in the graph connecting the new literaly layer with the new action
+                # # add two-way edges in the graph connecting the new literal layer with the new action
                 action_layer.add_outbound_edges(action, action.effects)
                 literal_layer.add_inbound_edges(action, action.effects)
 
